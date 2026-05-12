@@ -70,14 +70,14 @@ border-color:rgba(187,134,252,0.6);
 .magic-btn:active{transform:translateX(-50%) scale(.95)}
 .audio-btn{
 position:fixed;top:20px;right:24px;z-index:15;
-width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);
-background:rgba(255,255,255,0.05);backdrop-filter:blur(6px);
-color:rgba(255,255,255,0.5);font-size:1rem;cursor:pointer;
+width:40px;height:40px;border-radius:50%;border:1px solid rgba(187,134,252,0.55);
+background:rgba(187,134,252,0.2);backdrop-filter:blur(6px);
+color:rgba(255,255,255,0.95);font-size:1rem;cursor:pointer;
 display:flex;align-items:center;justify-content:center;
 transition:all .3s;font-family:inherit;
 }
-.audio-btn:hover{background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.3)}
-.audio-btn.muted{color:rgba(255,255,255,0.2)}
+.audio-btn:hover{background:rgba(187,134,252,0.38);color:#fff;border-color:rgba(187,134,252,0.9)}
+.audio-btn.muted{color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.18)}
 </style>
 </head>
 <body>
@@ -300,17 +300,17 @@ btn.classList.remove('muted');
 }
 });
 
-function handleClick(x,y){
-showAffirmation(x,y);
-}
+let lastTouchTime=0;
 document.addEventListener('click',e=>{
 if(e.target.closest('button'))return;
-handleClick(e.clientX,e.clientY);
+if(Date.now()-lastTouchTime<600)return;
+showAffirmation(e.clientX,e.clientY);
 });
 document.addEventListener('touchstart',e=>{
 if(e.target.closest('button'))return;
+lastTouchTime=Date.now();
 const t=e.touches[0];
-handleClick(t.clientX,t.clientY);
+showAffirmation(t.clientX,t.clientY);
 },{passive:true});
 
 document.getElementById('magicBtn').addEventListener('click',e=>{
