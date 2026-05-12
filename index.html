@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -27,19 +26,27 @@ animation:fadeInOut 10s ease forwards;text-align:center;
 25%{opacity:.6;transform:translate(-50%,50%) scale(1)}
 100%{opacity:0;transform:translate(-50%,50%) scale(.95)}
 }
+/* Аффирмации — без рукописного шрифта, читаемый размер на любом экране */
 .affirmation{
 position:fixed;z-index:20;pointer-events:none;
-font-family:'Segoe UI','Brush Script MT',cursive,sans-serif;
-font-size:1.6rem;font-weight:600;color:#fff;
+font-family:'Segoe UI',system-ui,sans-serif;
+font-size:1.5rem;font-weight:600;color:#fff;
 text-shadow:0 0 10px rgba(187,134,252,0.8),0 0 30px rgba(187,134,252,0.4),0 0 60px rgba(187,134,252,0.2);
 animation:affirmAppear .8s cubic-bezier(.34,1.56,.64,1) forwards;
-max-width:400px;text-align:center;line-height:1.4;
+max-width:340px;text-align:center;line-height:1.45;
+}
+@media(max-width:600px){
+.affirmation{font-size:1.25rem;max-width:260px;font-weight:600}
+.instruction{font-size:.85rem;letter-spacing:2px}
+.magic-btn{padding:12px 24px;font-size:.9rem;bottom:20px}
+.star-counter{font-size:.75rem;top:12px;left:16px}
+.audio-btn{width:34px;height:34px;font-size:.85rem;top:12px;right:16px}
 }
 @keyframes affirmAppear{
 0%{opacity:0;transform:translateY(20px) scale(.5)}
 100%{opacity:1;transform:translateY(0) scale(1)}
 }
-.affirm-fade{animation:affirmFade .8s cubic-bezier(.34,1.56,.64,1) forwards}
+.affirm-fade{animation:affirmFade .8s ease forwards}
 @keyframes affirmFade{
 0%{opacity:1;transform:translateY(0) scale(1)}
 100%{opacity:0;transform:translateY(-30px) scale(1.1)}
@@ -71,14 +78,6 @@ transition:all .3s;font-family:inherit;
 }
 .audio-btn:hover{background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.3)}
 .audio-btn.muted{color:rgba(255,255,255,0.2)}
-.audio-btn.muted:hover{color:rgba(255,255,255,0.4)}
-@media(max-width:600px){
-.affirmation{font-size:1.2rem;max-width:280px}
-.instruction{font-size:.85rem;letter-spacing:2px}
-.magic-btn{padding:12px 24px;font-size:.9rem;bottom:20px}
-.star-counter{font-size:.75rem;top:12px;left:16px}
-.audio-btn{width:34px;height:34px;font-size:.85rem;top:12px;right:16px}
-}
 </style>
 </head>
 <body>
@@ -87,7 +86,7 @@ transition:all .3s;font-family:inherit;
 <button class="audio-btn" id="audioBtn" title="Фоновая музыка">♪</button>
 <audio id="bgMusic" loop preload="metadata"><source src="music.mp3" type="audio/mpeg"></audio>
 <div class="instruction">✧ кликай по звёздам ✧</div>
-<button class="magic-btn" id="magicBtn">✨ Хочу волшебства</button>
+<button class="magic-btn" id="magicBtn">Хочу волшебства</button>
 
 <script>
 const AFFIRMATIONS=[
@@ -141,7 +140,6 @@ centerX=W/2;centerY=H/2;
 resize();
 window.addEventListener('resize',resize);
 
-// Generate gradient background
 let bgPhase=0;
 function drawBg(time){
 bgPhase+=0.002;
@@ -157,7 +155,6 @@ ctx.fillStyle=g;
 ctx.fillRect(0,0,W,H);
 }
 
-// Layer config
 const LAYERS=[
 {count:500,sizeMin:1,sizeMax:1.8,parallax:.2,twinkleSpeed:'slow',color:'255,255,255'},
 {count:400,sizeMin:1.2,sizeMax:2.2,parallax:.5,twinkleSpeed:'mid',color:'220,210,255'},
@@ -170,11 +167,9 @@ function initStars(){
 stars=[];
 LAYERS.forEach((layer)=>{
 for(let i=0;i<layer.count;i++){
-const angle=Math.random()*Math.PI*2;
-const dist=Math.random()*Math.max(W,H)*0.5;
 stars.push({
 x:Math.random()*W,y:Math.random()*H,
-baseX:0,baseY:0,// will be set below
+baseX:0,baseY:0,
 size:layer.sizeMin+Math.random()*(layer.sizeMax-layer.sizeMin),
 parallax:layer.parallax,
 twinkleSpeed:layer.twinkleSpeed,
@@ -183,11 +178,13 @@ phase:Math.random()*Math.PI*2,
 twinkleRate:layer.twinkleSpeed==='slow'?0.2+Math.random()*0.3:
 layer.twinkleSpeed==='mid'?0.5+Math.random()*0.6:
 1+Math.random()*1.2,
-layerIdx:i,
+// Случайные мигания: каждая звезда иногда резко тухнет и вспыхивает
+blinkTimer:Math.random()*600,
+blinkDuration:0,
+blinkAlpha:1,
 });
 }
 });
-// set base positions
 stars.forEach(s=>{s.baseX=s.x;s.baseY=s.y});
 document.getElementById('starCount').textContent=stars.length;
 }
@@ -199,7 +196,6 @@ document.addEventListener('touchmove',e=>{
 const t=e.touches[0];mouse.x=t.clientX;mouse.y=t.clientY;mouse.active=true;
 },{passive:true});
 
-// Comets
 const comets=[];
 function spawnComet(){
 const side=Math.floor(Math.random()*4);
@@ -214,10 +210,7 @@ comets.push({x,y,vx,vy,tail:[],life:1,decay:0.002+Math.random()*0.003,size:1.5+M
 }
 for(let i=0;i<4;i++)spawnComet();
 
-// Fireworks particles
 const bursts=[];
-let affirmTimeout=null;
-const activeAffirmations=[];
 
 function spawnBurst(x,y,count=40){
 const hue=260+Math.random()*40;
@@ -241,95 +234,145 @@ color:`hsla(${hue+Math.random()*30-15},${saturation}%,${lightness+Math.random()*
 bursts.push({particles,age:0});
 }
 
+// --- Аффирмации: только одна на экране ---
+let currentAffirmEl=null;
+let currentAffirmTimeout=null;
+
 function showAffirmation(x,y){
+// Убираем предыдущую сразу, не ждём таймаута
+if(currentAffirmEl){
+clearTimeout(currentAffirmTimeout);
+removeAffirm(currentAffirmEl);
+currentAffirmEl=null;
+}
 const text=AFFIRMATIONS[Math.floor(Math.random()*AFFIRMATIONS.length)];
 const el=document.createElement('div');
 el.className='affirmation';
 el.textContent=text;
-let posX=x-200+Math.random()*400;
-let posY=y-100+Math.random()*200;
-posX=Math.max(20,Math.min(W-420,posX));
+let posX=x-170+Math.random()*200;
+let posY=y-80+Math.random()*100;
+posX=Math.max(12,Math.min(W-360,posX));
 posY=Math.max(60,Math.min(H-80,posY));
 el.style.left=posX+'px';el.style.top=posY+'px';
 document.body.appendChild(el);
-const remove=()=>{
+currentAffirmEl=el;
+currentAffirmTimeout=setTimeout(()=>{
+removeAffirm(el);
+if(currentAffirmEl===el)currentAffirmEl=null;
+},4500);
+}
+
+function removeAffirm(el){
 el.classList.add('affirm-fade');
 setTimeout(()=>{if(el.parentNode)el.parentNode.removeChild(el)},800);
-};
-const idx=activeAffirmations.push({el,remove,timeout:null})-1;
-activeAffirmations[idx].timeout=setTimeout(remove,5000);
 }
 
-function clearAffirmations(){
-activeAffirmations.forEach(a=>{
-clearTimeout(a.timeout);
-a.remove();
-});
-activeAffirmations.length=0;
-}
-
+// --- Музыка: запуск при первом взаимодействии (для iOS/Android) ---
 const audioEl=document.getElementById('bgMusic');
 let audioPlaying=false;
-document.getElementById('audioBtn').addEventListener('click',()=>{
+let audioUserIntent=false; // пользователь хочет музыку
+
+function tryPlayAudio(){
+if(!audioUserIntent)return;
+audioEl.play().then(()=>{
+audioPlaying=true;
+document.getElementById('audioBtn').classList.remove('muted');
+}).catch(()=>{});
+}
+
+// Первое касание экрана — пытаемся запустить если хотели
+document.addEventListener('touchstart',()=>{tryPlayAudio()},{passive:true,once:false});
+document.addEventListener('click',()=>{tryPlayAudio()},{once:false});
+
+document.getElementById('audioBtn').addEventListener('click',(e)=>{
+e.stopPropagation();
 const btn=document.getElementById('audioBtn');
 if(audioPlaying){
-audioEl.pause();audioPlaying=false;btn.classList.add('muted');
+audioEl.pause();audioPlaying=false;audioUserIntent=false;btn.classList.add('muted');
 }else{
-audioEl.play().then(()=>{audioPlaying=true;btn.classList.remove('muted')}).catch(()=>{});
+audioUserIntent=true;
+audioEl.play().then(()=>{
+audioPlaying=true;btn.classList.remove('muted');
+}).catch(()=>{
+// заблокировано — запустим при следующем тапе
+btn.classList.remove('muted');
+});
 }
 });
 
 function handleClick(x,y){
 showAffirmation(x,y);
 }
-document.addEventListener('click',e=>handleClick(e.clientX,e.clientY));
+document.addEventListener('click',e=>{
+if(e.target.closest('button'))return;
+handleClick(e.clientX,e.clientY);
+});
 document.addEventListener('touchstart',e=>{
+if(e.target.closest('button'))return;
 const t=e.touches[0];
 handleClick(t.clientX,t.clientY);
 },{passive:true});
 
 document.getElementById('magicBtn').addEventListener('click',e=>{
+e.stopPropagation();
 for(let i=0;i<3;i++)setTimeout(spawnComet,i*300);
-showAffirmation(centerX-100,centerY-60);
-setTimeout(()=>showAffirmation(centerX+80,centerY+20),300);
-setTimeout(()=>showAffirmation(centerX-40,centerY+80),600);
+showAffirmation(centerX-60,centerY-40);
 const btn=e.currentTarget;
-btn.textContent='✨ Волшебство ✨';
-setTimeout(()=>{btn.textContent='✨ Хочу волшебства'},1000);
+btn.textContent='Волшебство';
+setTimeout(()=>{btn.textContent='Хочу волшебства'},1000);
 });
 
-// Main loop
-let lastTime=0;
-
-function update(time){
-const dt=Math.min((time-lastTime)/16.667,3);
-lastTime=time;
-
-// Update stars base positions relative to parallax layers (subtle drift)
+// --- Обновление звёзд с мерцанием ---
+function updateStars(dt,time){
 stars.forEach(s=>{
+// Параллакс
 const lx=mouse.x-centerX;
 const ly=mouse.y-centerY;
 const dx=lx*s.parallax*0.02;
 const dy=ly*s.parallax*0.02;
 s.x=s.baseX+dx;
 s.y=s.baseY+dy;
-});
 
-// Gravity effect on nearby stars
+// Притяжение к курсору
+if(mouse.active){
+const mdx=mouse.x-s.x;
+const mdy=mouse.y-s.y;
+const dist=Math.sqrt(mdx*mdx+mdy*mdy);
 const gravRadius=180;
-stars.forEach(s=>{
-if(!mouse.active)return;
-const dx=mouse.x-s.x;
-const dy=mouse.y-s.y;
-const dist=Math.sqrt(dx*dx+dy*dy);
 if(dist<gravRadius&&dist>2){
 const force=(1-dist/gravRadius)*0.8;
-s.x+=dx/dist*force;
-s.y+=dy/dist*force;
+s.x+=mdx/dist*force;
+s.y+=mdy/dist*force;
+}
+}
+
+// Случайное мигание: таймер отсчитывает, потом звезда мигает
+s.blinkTimer-=dt;
+if(s.blinkTimer<=0){
+// Запускаем мигание: быстро гаснет и загорается
+s.blinkDuration=8+Math.random()*12; // кадров
+s.blinkTimer=200+Math.random()*800; // следующий сброс
+}
+if(s.blinkDuration>0){
+s.blinkDuration-=dt;
+// В середине мигания звезда тёмная
+const t=1-s.blinkDuration/12;
+s.blinkAlpha=t<0.5?1-t*2:t*2-1;
+s.blinkAlpha=Math.max(0,s.blinkAlpha);
+}else{
+s.blinkAlpha=1;
 }
 });
+}
 
-// Comets
+let lastTime=0;
+
+function update(time){
+const dt=Math.min((time-lastTime)/16.667,3);
+lastTime=time;
+
+updateStars(dt,time);
+
 comets.forEach(c=>{
 c.x+=c.vx;c.y+=c.vy;
 c.life-=c.decay;
@@ -338,15 +381,12 @@ if(c.tail.length>25)c.tail.shift();
 });
 for(let i=comets.length-1;i>=0;i--){
 if(comets[i].life<=0){
-// Burst on death
 spawnBurst(comets[i].x,comets[i].y,15);
 comets.splice(i,1);
 }
 }
 if(comets.length<4&&Math.random()<0.005)spawnComet();
-if(comets.length<4&&Math.random()<0.005)spawnComet();
 
-// Fireworks
 bursts.forEach(b=>{
 b.age++;
 b.particles.forEach(p=>{
@@ -363,10 +403,6 @@ bursts.splice(i,1);
 }
 }
 
-function draw(time){
-ctx.clearRect(0,0,W,H);
-drawBg(time);
-
 function drawStar(x,y,r1,r2,points,rot){
 ctx.beginPath();
 for(let i=0;i<points*2;i++){
@@ -376,8 +412,7 @@ const px=x+Math.cos(angle)*r;
 const py=y+Math.sin(angle)*r;
 if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
 }
-ctx.closePath();
-ctx.fill();
+ctx.closePath();ctx.fill();
 }
 function drawSparkle(x,y,r,rot){
 ctx.beginPath();
@@ -386,15 +421,25 @@ const a=rot+i*Math.PI/2;
 const px=x+Math.cos(a)*r;
 const py=y+Math.sin(a)*r;
 if(i===0)ctx.moveTo(px,py);
-else {const cx=x+Math.cos(a-Math.PI/4)*r*0.2;const cy=y+Math.sin(a-Math.PI/4)*r*0.2;ctx.quadraticCurveTo(cx,cy,px,py)}
+else{const cx=x+Math.cos(a-Math.PI/4)*r*0.2;const cy=y+Math.sin(a-Math.PI/4)*r*0.2;ctx.quadraticCurveTo(cx,cy,px,py)}
 }
 ctx.closePath();ctx.fill();
 }
-// Stars
+
+function draw(time){
+ctx.clearRect(0,0,W,H);
+drawBg(time);
+
+// Звёзды
 stars.forEach(s=>{
+// Плавное мерцание (синус)
 const brightness=0.5+0.5*Math.sin(time*0.001*s.twinkleRate+s.phase);
 const minA=s.size<1.5?0.15:0.25;
-const alpha=minA+(1-minA)*brightness;
+const smoothAlpha=minA+(1-minA)*brightness;
+
+// Умножаем на коэффициент случайного мигания
+const alpha=smoothAlpha*s.blinkAlpha;
+
 const col=s.colorBase;
 const rot=s.phase;
 if(s.size>3){
@@ -412,10 +457,9 @@ else{ctx.beginPath();ctx.arc(s.x,s.y,Math.max(1,s.size*0.7),0,Math.PI*2);ctx.fil
 });
 ctx.globalAlpha=1;
 
-// Comets
+// Кометы
 comets.forEach(c=>{
 if(c.tail.length<2)return;
-ctx.beginPath();
 const tailLen=c.tail.length;
 for(let i=0;i<tailLen;i++){
 const t=c.tail[i];
@@ -427,26 +471,23 @@ ctx.lineTo(t.x+size*0.3,t.y+size*0.3);
 ctx.strokeStyle=`rgba(200,180,255,${c.life*0.4})`;
 ctx.lineWidth=c.size*1.2;
 ctx.stroke();
-// head glow
 const g=ctx.createRadialGradient(c.x,c.y,0,c.x,c.y,c.size*6);
 g.addColorStop(0,`rgba(187,134,252,${c.life*0.6})`);
 g.addColorStop(0.4,`rgba(150,130,220,${c.life*0.2})`);
 g.addColorStop(1,'rgba(187,134,252,0)');
 ctx.fillStyle=g;
 ctx.beginPath();ctx.arc(c.x,c.y,c.size*6,0,Math.PI*2);ctx.fill();
-// head dot
 ctx.fillStyle=`rgba(255,255,255,${c.life*0.9})`;
 ctx.beginPath();ctx.arc(c.x,c.y,c.size,0,Math.PI*2);ctx.fill();
 });
 
-// Fireworks
+// Фейерверки
 bursts.forEach(b=>{
 b.particles.forEach(p=>{
 if(p.life<=0)return;
 ctx.globalAlpha=Math.max(0,p.life);
 ctx.fillStyle=p.color+Math.max(0,p.life)+')';
 ctx.beginPath();ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);ctx.fill();
-// glow
 const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size*4*p.life);
 const col=p.color.replace('hsla(','').replace(')','').split(',');
 g.addColorStop(0,`hsla(${col[0]},${col[1]},${col[2]},${p.life*0.3})`);
@@ -456,13 +497,12 @@ ctx.beginPath();ctx.arc(p.x,p.y,p.size*4*p.life,0,Math.PI*2);ctx.fill();
 });
 });
 ctx.globalAlpha=1;
-
-requestAnimationFrame(draw);
 }
 
 function loop(time){
 update(time);
 draw(time);
+requestAnimationFrame(loop);
 }
 
 initStars();
